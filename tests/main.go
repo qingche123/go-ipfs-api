@@ -1,13 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"io"
-	"math/rand"
+	"fmt"
+	"bytes"
 	"time"
+	"math/rand"
 
 	"github.com/ipfs/go-ipfs-api"
-
 	u "github.com/ipfs/go-ipfs-util"
 )
 
@@ -83,6 +83,30 @@ func makeRandomDir(depth int) (string, error) {
 
 func main() {
 	sh = shell.NewShell("localhost:5001")
+
+	for i := 0; i < 10; i++  {
+		data := []byte(randString())
+		hash, err := sh.EncryptAndAdd(data, "test11test11test11test11test11", shell.AES)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		fmt.Printf("File Hash: %s\n", hash)
+
+		decData, err := sh.GetAndDecrypt(hash, "test11test11test11test11test11")
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		if bytes.Compare(decData, data) == 0 {
+			fmt.Println("GetAndDecrypt Success")
+		} else {
+			fmt.Println("GetAndDecrypt Failed")
+		}
+	}
+
+/*
 	for i := 0; i < 200; i++ {
 		_, err := makeRandomObject()
 		if err != nil {
@@ -92,6 +116,17 @@ func main() {
 	}
 	fmt.Println("we're okay")
 
+	f, err := os.Open("test")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	hash, err := sh.Add(f)
+	fmt.Println(hash)
+
+	sh.Get(hash, "zzc")
+*/
+/*
 	out, err := makeRandomDir(10)
 	fmt.Printf("%d calls\n", ncalls)
 	if err != nil {
@@ -103,4 +138,5 @@ func main() {
 	for {
 		time.Sleep(time.Second * 1000)
 	}
+*/
 }

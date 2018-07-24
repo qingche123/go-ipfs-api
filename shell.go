@@ -19,9 +19,10 @@ import (
 	homedir "github.com/mitchellh/go-homedir"
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr-net"
-	tar "github.com/whyrusleeping/tar-utils"
+	tar "github.com/qingche123/tar-utils"
 
 	p2pmetrics "github.com/libp2p/go-libp2p-metrics"
+	"github.com/ontio/ontology-crypto/aes"
 )
 
 const (
@@ -606,4 +607,81 @@ func (s *Shell) SwarmConnect(ctx context.Context, addr ...string) error {
 		Arguments(addr...).
 		Exec(ctx, &conn)
 	return err
+}
+
+// Encrypt and Add data to ipfs by the given password, returns the hash of the added data
+func (s *Shell) EncryptAndAdd(data []byte, password string, alg SymmetricScheme) (string, error) {
+	salt, err := randomBytes(16)
+	if err != nil {
+		return "", errors.New("salt generate error")
+	}
+
+	dKey, err := kdf([]byte(password), salt)
+	if err != nil {
+		return "", err
+	}
+
+	nonce := dKey[:16]
+	eKey := dKey[len(dKey)-16:]
+
+	encData, err := aes.AesEncrypt(data, eKey, nonce)
+	if err != nil || 0 == len(encData){
+		return "", err
+	}
+	for _, v := range salt {
+		encData = append(encData, v)
+	}
+	encAlg := make([]byte, 16)
+	encAlg[15] = byte(alg)
+	for _, v := range encAlg {
+		encData = append(encData, v)
+	}
+
+	r := bytes.NewReader(encData)
+	return s.AddWithOpts(r, true, false)
+}
+
+func (s *Shell) GetAndDecrypt(hash string, password string) ([]byte, error) {
+	resp, err := s.Request("get", hash).Option("create", true).Send(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Close()
+
+	if resp.Error != nil {
+		return nil, resp.Error
+	}
+
+	var buffer bytes.Buffer
+	extractor := &tar.Extractor{}
+	err = extractor.ExtractToData(resp.Output, &buffer)
+	if err != nil {
+		return nil, err
+	}
+
+	encData := buffer.Bytes()
+	if len(encData) == 0 {
+		return nil, errors.New("get data error")
+	}
+
+	extData := encData[len(encData) - 32:]
+	salt := extData[:16]
+	dKey, err := kdf([]byte(password), salt)
+	if err != nil {
+		return nil, err
+	}
+
+	nonce := dKey[:16]
+	eKey := dKey[len(dKey)-16:]
+
+	encAlg := extData[31]
+	if encAlg == byte(AES) {
+		decData, err := aes.AesDecrypt(encData[:len(encData) - 32], eKey, nonce)
+		if err != nil || 0 == len(decData){
+			return nil, err
+		} else {
+			return decData, err
+		}
+	}
+	return nil, errors.New("unsupport encrypt alg")
 }
