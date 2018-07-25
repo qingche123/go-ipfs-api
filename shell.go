@@ -685,3 +685,33 @@ func (s *Shell) GetAndDecrypt(hash string, password string) ([]byte, error) {
 	}
 	return nil, errors.New("unsupport encrypt alg")
 }
+
+
+// Add data to ipfs, returns the hash of the added data
+func (s *Shell) AddData(data []byte) (string, error) {
+	r := bytes.NewReader(data)
+	return s.AddWithOpts(r, true, false)
+}
+
+func (s *Shell) GetData(hash string) ([]byte, error) {
+	resp, err := s.Request("get", hash).Option("create", true).Send(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Close()
+
+	if resp.Error != nil {
+		return nil, resp.Error
+	}
+
+	var buffer bytes.Buffer
+	extractor := &tar.Extractor{}
+	err = extractor.ExtractToData(resp.Output, &buffer)
+	if err != nil {
+		return nil, err
+	}
+
+	data := buffer.Bytes()
+	return data, nil
+}
+
