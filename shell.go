@@ -142,15 +142,20 @@ type object struct {
 
 // Add a file to ipfs from the given reader, returns the hash of the added file
 func (s *Shell) Add(r io.Reader) (string, error) {
-	return s.AddWithOpts(r, true, false)
+	return s.AddWithOpts(r, true, false, nil)
+}
+
+// Add a file to ipfs from the given reader, returns the hash of the added file
+func (s *Shell) AddAndCopy(r io.Reader, copyNodes []string) (string, error) {
+	return s.AddWithOpts(r, true, false, copyNodes)
 }
 
 // AddNoPin a file to ipfs from the given reader, returns the hash of the added file without pinning the file
 func (s *Shell) AddNoPin(r io.Reader) (string, error) {
-	return s.AddWithOpts(r, false, false)
+	return s.AddWithOpts(r, false, false, nil)
 }
 
-func (s *Shell) AddWithOpts(r io.Reader, pin bool, rawLeaves bool) (string, error) {
+func (s *Shell) AddWithOpts(r io.Reader, pin bool, rawLeaves bool, copyNodes []string) (string, error) {
 	var rc io.ReadCloser
 	if rclose, ok := r.(io.ReadCloser); ok {
 		rc = rclose
@@ -164,12 +169,22 @@ func (s *Shell) AddWithOpts(r io.Reader, pin bool, rawLeaves bool) (string, erro
 	fileReader := files.NewMultiFileReader(slf, true)
 
 	var out object
-	return out.Hash, s.Request("add").
-		Option("progress", false).
-		Option("pin", pin).
-		Option("raw-leaves", rawLeaves).
-		Body(fileReader).
-		Exec(context.Background(), &out)
+	if copyNodes != nil {
+		return out.Hash, s.Request("add").
+			Option("progress", false).
+			Option("pin", pin).
+			Option("raw-leaves", rawLeaves).
+			Option("copy-nodes", copyNodes).
+			Body(fileReader).
+			Exec(context.Background(), &out)
+	} else {
+		return out.Hash, s.Request("add").
+			Option("progress", false).
+			Option("pin", pin).
+			Option("raw-leaves", rawLeaves).
+			Body(fileReader).
+			Exec(context.Background(), &out)
+	}
 }
 
 func (s *Shell) AddLink(target string) (string, error) {
@@ -638,7 +653,7 @@ func (s *Shell) EncryptAndAdd(data []byte, password string, alg SymmetricScheme)
 	}
 
 	r := bytes.NewReader(encData)
-	return s.AddWithOpts(r, true, false)
+	return s.AddWithOpts(r, true, false, nil)
 }
 
 func (s *Shell) GetAndDecrypt(hash string, password string) ([]byte, error) {
@@ -690,7 +705,7 @@ func (s *Shell) GetAndDecrypt(hash string, password string) ([]byte, error) {
 // Add data to ipfs, returns the hash of the added data
 func (s *Shell) AddData(data []byte) (string, error) {
 	r := bytes.NewReader(data)
-	return s.AddWithOpts(r, true, false)
+	return s.AddWithOpts(r, true, false, nil)
 }
 
 func (s *Shell) GetData(hash string) ([]byte, error) {

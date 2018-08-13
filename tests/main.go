@@ -2,13 +2,13 @@ package main
 
 import (
 	"io"
-	"fmt"
-	"bytes"
 	"time"
 	"math/rand"
 
 	"github.com/qingche123/go-ipfs-api"
 	u "github.com/ipfs/go-ipfs-util"
+	"fmt"
+	"os"
 )
 
 var sh *shell.Shell
@@ -83,7 +83,7 @@ func makeRandomDir(depth int) (string, error) {
 
 func main() {
 	sh = shell.NewShell("localhost:5001")
-
+/*
 	for i := 0; i < 10; i++  {
 		data := []byte(randString())
 		hash, err := sh.EncryptAndAdd(data, "test11test11test11test11test11", shell.AES)
@@ -105,9 +105,9 @@ func main() {
 			fmt.Println("GetAndDecrypt Failed")
 		}
 	}
+*/
 
-/*
-	for i := 0; i < 200; i++ {
+/*	for i := 0; i < 20; i++ {
 		_, err := makeRandomObject()
 		if err != nil {
 			fmt.Println("err: ", err)
@@ -115,17 +115,29 @@ func main() {
 		}
 	}
 	fmt.Println("we're okay")
+*/
 
 	f, err := os.Open("test")
 	if err != nil {
 		fmt.Println(err.Error())
 	}
+/*	hash, err := sh.Add(f)
+	if err!= nil {
+		fmt.Println(err.Error())
+	}
+	fmt.Println(hash)
+	*/
 
-	hash, err := sh.Add(f)
+	copyNodes := make([]string, 1)
+	copyNodes[0] = "127.0.0.1:5002"
+	hash, err := sh.AddAndCopy(f, copyNodes)
+	if err!= nil {
+		fmt.Println(err.Error())
+	}
 	fmt.Println(hash)
 
-	sh.Get(hash, "zzc")
-*/
+	//sh.Get(hash, "zzc")
+
 /*
 	out, err := makeRandomDir(10)
 	fmt.Printf("%d calls\n", ncalls)
