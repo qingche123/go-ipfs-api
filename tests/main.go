@@ -9,6 +9,7 @@ import (
 	u "github.com/ipfs/go-ipfs-util"
 	"fmt"
 	"os"
+	"bytes"
 )
 
 var sh *shell.Shell
@@ -81,9 +82,45 @@ func makeRandomDir(depth int) (string, error) {
 	return curdir, nil
 }
 
-func main() {
-	sh = shell.NewShell("localhost:5001")
-/*
+func localCopyTest(){
+	fmt.Println("LocalTest")
+	sh = shell.NewShell("127.0.0.1:5001")
+	f, err := os.Open("test")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	copyNodes := make([]string, 1)
+	copyNodes[0] = "127.0.0.1:5002"
+	hash, err := sh.AddAndCopy(f, 1, copyNodes)
+	if err!= nil {
+		fmt.Println(err.Error())
+	}
+	fmt.Println(hash)
+}
+
+
+func remoteCopyTest(){
+	fmt.Println("RemoteTest")
+	sh = shell.NewShell("10.0.1.128:5001")
+	f, err := os.Open("test")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	copyNodes := make([]string, 3)
+	copyNodes[0] = "10.0.1.106:5001"
+	copyNodes[1] = "10.0.1.107:5001"
+	copyNodes[2] = "10.0.1.108:5001"
+	hash, err := sh.AddAndCopy(f, 1, copyNodes)
+	if err!= nil {
+		fmt.Println(err.Error())
+	}
+	fmt.Println(hash)
+}
+
+func cryptTest(){
+	fmt.Println("CryptoTest")
+	sh = shell.NewShell("10.0.1.128:5001")
+
 	for i := 0; i < 10; i++  {
 		data := []byte(randString())
 		hash, err := sh.EncryptAndAdd(data, "test11test11test11test11test11", shell.AES)
@@ -105,9 +142,13 @@ func main() {
 			fmt.Println("GetAndDecrypt Failed")
 		}
 	}
-*/
+}
 
-/*	for i := 0; i < 20; i++ {
+func randomTest(){
+	fmt.Println("RandomTest")
+	sh = shell.NewShell("10.0.1.128:5001")
+
+	for i := 0; i < 20; i++ {
 		_, err := makeRandomObject()
 		if err != nil {
 			fmt.Println("err: ", err)
@@ -115,30 +156,7 @@ func main() {
 		}
 	}
 	fmt.Println("we're okay")
-*/
 
-	f, err := os.Open("test")
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-/*	hash, err := sh.Add(f)
-	if err!= nil {
-		fmt.Println(err.Error())
-	}
-	fmt.Println(hash)
-	*/
-
-	copyNodes := make([]string, 1)
-	copyNodes[0] = "127.0.0.1:5002"
-	hash, err := sh.AddAndCopy(f, copyNodes)
-	if err!= nil {
-		fmt.Println(err.Error())
-	}
-	fmt.Println(hash)
-
-	//sh.Get(hash, "zzc")
-
-/*
 	out, err := makeRandomDir(10)
 	fmt.Printf("%d calls\n", ncalls)
 	if err != nil {
@@ -150,5 +168,11 @@ func main() {
 	for {
 		time.Sleep(time.Second * 1000)
 	}
-*/
+
+}
+func main() {
+	localCopyTest()
+	//remoteCopyTest()
+	//cryptTest()
+	//randomTest()
 }
