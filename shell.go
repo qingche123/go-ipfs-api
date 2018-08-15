@@ -509,6 +509,31 @@ func (s *Shell) BlockPut(block []byte, format, mhtype string, mhlen int) (string
 		Exec(context.Background(), &out)
 }
 
+func (s *Shell) BlockRm(path string) (string, error) {
+	var out struct {
+		Hash   string
+		Error  string
+	}
+	resp, err := s.Request("block/rm", path).Send(context.Background())
+	if err != nil {
+		return "", err
+	}
+	defer resp.Close()
+	if resp.Error != nil {
+		return "", resp.Error
+	}
+
+	err = json.NewDecoder(resp.Output).Decode(&out)
+	if err != nil {
+		return "", err
+	}
+	if len(out.Error) != 0{
+		return out.Hash, errors.New(out.Error)
+	} else {
+		return out.Hash, nil
+	}
+}
+
 type IpfsObject struct {
 	Links []ObjectLink
 	Data  string

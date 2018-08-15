@@ -98,7 +98,6 @@ func localCopyTest(){
 	fmt.Println(hash)
 }
 
-
 func remoteCopyTest(){
 	fmt.Println("RemoteTest")
 	sh = shell.NewShell("10.0.1.128:5001")
@@ -108,13 +107,42 @@ func remoteCopyTest(){
 	}
 	copyNodes := make([]string, 3)
 	copyNodes[0] = "10.0.1.106:5001"
-	copyNodes[1] = "10.0.1.107:5001"
+	copyNodes[1] = "10.0.1.103:5001"
 	copyNodes[2] = "10.0.1.108:5001"
-	hash, err := sh.AddAndCopy(f, 1, copyNodes)
+	hash, err := sh.AddAndCopy(f, 2, copyNodes)
 	if err!= nil {
 		fmt.Println(err.Error())
 	}
 	fmt.Println(hash)
+}
+
+func deleteTest(){
+	fmt.Println("DeleteTest")
+	sh = shell.NewShell("127.0.0.1:5001")
+	f, err := os.Open("test")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	hash, err := sh.Add(f)
+	if err!= nil {
+		fmt.Println(err.Error())
+	}
+	fmt.Println(hash)
+
+	err = sh.Unpin(hash)
+	if err!= nil {
+		fmt.Println(err.Error())
+	} else {
+		fmt.Println("Unpin Success")
+	}
+
+	hash, err = sh.BlockRm(hash)
+	if err!= nil {
+		fmt.Println("Error:", err.Error())
+	} else {
+		fmt.Println("BlockRm Success ", hash)
+	}
 }
 
 func cryptTest(){
@@ -171,8 +199,9 @@ func randomTest(){
 
 }
 func main() {
-	localCopyTest()
+	//localCopyTest()
 	//remoteCopyTest()
+	deleteTest()
 	//cryptTest()
 	//randomTest()
 }
