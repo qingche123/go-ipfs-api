@@ -2,14 +2,15 @@ package main
 
 import (
 	"io"
-	"time"
 	"math/rand"
+	"time"
 
-	"github.com/qingche123/go-ipfs-api"
-	u "github.com/ipfs/go-ipfs-util"
+	"bytes"
 	"fmt"
 	"os"
-	"bytes"
+
+	"github.com/daseinio/go-ipfs-api"
+	u "github.com/ipfs/go-ipfs-util"
 )
 
 var sh *shell.Shell
@@ -82,7 +83,7 @@ func makeRandomDir(depth int) (string, error) {
 	return curdir, nil
 }
 
-func localCopyTest(){
+func localCopyTest() {
 	fmt.Println("LocalTest")
 	sh = shell.NewShell("127.0.0.1:5001")
 	f, err := os.Open("test")
@@ -91,14 +92,26 @@ func localCopyTest(){
 	}
 	copyNodes := make([]string, 1)
 	copyNodes[0] = "127.0.0.1:5002"
-	hash, err := sh.AddAndCopy(f, 1, copyNodes)
-	if err!= nil {
-		fmt.Println(err.Error())
+	hash, copy, err := sh.AddAndCopy(f, 1, copyNodes)
+	if err != nil {
+		fmt.Println("err", err.Error())
 	}
-	fmt.Println(hash)
+
+	fmt.Println("hash", hash)
+
+	for ip, state := range copy {
+		switch state {
+		case shell.NoUsed:
+			fmt.Printf("node %s, no used\n", ip)
+		case shell.CopyFailed:
+			fmt.Printf("node %s, copy failed\n", ip)
+		case shell.CopySuccess:
+			fmt.Printf("node %s, copy success\n", ip)
+		}
+	}
 }
 
-func remoteCopyTest(){
+func remoteCopyTest() {
 	fmt.Println("RemoteTest")
 	sh = shell.NewShell("10.0.1.128:5001")
 	f, err := os.Open("test")
@@ -109,14 +122,14 @@ func remoteCopyTest(){
 	copyNodes[0] = "10.0.1.106:5001"
 	copyNodes[1] = "10.0.1.103:5001"
 	copyNodes[2] = "10.0.1.108:5001"
-	hash, err := sh.AddAndCopy(f, 2, copyNodes)
-	if err!= nil {
+	hash, _, err := sh.AddAndCopy(f, 2, copyNodes)
+	if err != nil {
 		fmt.Println(err.Error())
 	}
 	fmt.Println(hash)
 }
 
-func deleteTest(){
+func deleteTest() {
 	fmt.Println("DeleteTest")
 	sh = shell.NewShell("127.0.0.1:5001")
 	f, err := os.Open("test")
@@ -125,31 +138,31 @@ func deleteTest(){
 	}
 
 	hash, err := sh.Add(f)
-	if err!= nil {
+	if err != nil {
 		fmt.Println(err.Error())
 	}
 	fmt.Println(hash)
 
 	err = sh.Unpin(hash)
-	if err!= nil {
+	if err != nil {
 		fmt.Println(err.Error())
 	} else {
 		fmt.Println("Unpin Success")
 	}
 
 	hash, err = sh.BlockRm(hash)
-	if err!= nil {
+	if err != nil {
 		fmt.Println("Error:", err.Error())
 	} else {
 		fmt.Println("BlockRm Success ", hash)
 	}
 }
 
-func cryptTest(){
+func cryptTest() {
 	fmt.Println("CryptoTest")
 	sh = shell.NewShell("10.0.1.128:5001")
 
-	for i := 0; i < 10; i++  {
+	for i := 0; i < 10; i++ {
 		data := []byte(randString())
 		hash, err := sh.EncryptAndAdd(data, "test11test11test11test11test11", shell.AES)
 		if err != nil {
@@ -172,7 +185,7 @@ func cryptTest(){
 	}
 }
 
-func randomTest(){
+func randomTest() {
 	fmt.Println("RandomTest")
 	sh = shell.NewShell("10.0.1.128:5001")
 
@@ -199,9 +212,8 @@ func randomTest(){
 
 }
 func main() {
-	//localCopyTest()
+	localCopyTest()
 	//remoteCopyTest()
-	deleteTest()
 	//cryptTest()
 	//randomTest()
 }

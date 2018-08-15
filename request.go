@@ -60,7 +60,6 @@ func (r *Response) Decode(dec interface{}) error {
 	if r.Error != nil {
 		return r.Error
 	}
-
 	return json.NewDecoder(r.Output).Decode(dec)
 }
 

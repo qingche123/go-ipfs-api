@@ -142,20 +142,22 @@ type object struct {
 
 // Add a file to ipfs from the given reader, returns the hash of the added file
 func (s *Shell) Add(r io.Reader) (string, error) {
-	return s.AddWithOpts(r, true, false, 0, nil)
+	hash, _, err := s.AddWithOpts(r, true, false, 0, nil)
+	return hash, err
 }
 
 // Add a file to ipfs from the given reader and copy files to other ipfs nodes, returns the hash of the added file
-func (s *Shell) AddAndCopy(r io.Reader, copyNum int, dstNodeAddr []string) (string, error) {
+func (s *Shell) AddAndCopy(r io.Reader, copyNum int, dstNodeAddr []string) (string, map[string]CopyState, error) {
 	return s.AddWithOpts(r, true, false, copyNum, dstNodeAddr)
 }
 
 // AddNoPin a file to ipfs from the given reader, returns the hash of the added file without pinning the file
 func (s *Shell) AddNoPin(r io.Reader) (string, error) {
-	return s.AddWithOpts(r, false, false, 0,nil)
+	hash, _, err := s.AddWithOpts(r, false, false, 0, nil)
+	return hash, err
 }
 
-func (s *Shell) AddWithOpts(r io.Reader, pin bool, rawLeaves bool, copyNum int, dstNodeAddr []string) (string, error) {
+func (s *Shell) AddWithOpts(r io.Reader, pin bool, rawLeaves bool, copyNum int, dstNodeAddr []string) (string, map[string]CopyState, error) {
 	var rc io.ReadCloser
 	if rclose, ok := r.(io.ReadCloser); ok {
 		rc = rclose
@@ -168,12 +170,12 @@ func (s *Shell) AddWithOpts(r io.Reader, pin bool, rawLeaves bool, copyNum int, 
 	slf := files.NewSliceFile("", "", []files.File{fr})
 	fileReader := files.NewMultiFileReader(slf, true)
 
-	var out object
+	var out AddedResult
 	if copyNum != 0 && dstNodeAddr != nil {
 		if copyNum > len(dstNodeAddr) {
-			return "", errors.New("copyNum must smaller than length of copyNodeAddr")
+			return "", nil, errors.New("copyNum must smaller than length of copyNodeAddr")
 		}
-		return out.Hash, s.Request("add").
+		return out.Hash, out.Copy, s.Request("add").
 			Option("progress", false).
 			Option("pin", pin).
 			Option("raw-leaves", rawLeaves).
@@ -182,7 +184,7 @@ func (s *Shell) AddWithOpts(r io.Reader, pin bool, rawLeaves bool, copyNum int, 
 			Body(fileReader).
 			Exec(context.Background(), &out)
 	} else {
-		return out.Hash, s.Request("add").
+		return out.Hash, nil, s.Request("add").
 			Option("progress", false).
 			Option("pin", pin).
 			Option("raw-leaves", rawLeaves).
@@ -669,7 +671,7 @@ func (s *Shell) EncryptAndAdd(data []byte, password string, alg SymmetricScheme)
 	eKey := dKey[len(dKey)-16:]
 
 	encData, err := aes.AesEncrypt(data, eKey, nonce)
-	if err != nil || 0 == len(encData){
+	if err != nil || 0 == len(encData) {
 		return "", err
 	}
 	for _, v := range salt {
@@ -682,7 +684,8 @@ func (s *Shell) EncryptAndAdd(data []byte, password string, alg SymmetricScheme)
 	}
 
 	r := bytes.NewReader(encData)
-	return s.AddWithOpts(r, true, false, 0,nil)
+	hash, _, err := s.AddWithOpts(r, true, false, 0, nil)
+	return hash, err
 }
 
 func (s *Shell) GetAndDecrypt(hash string, password string) ([]byte, error) {
@@ -708,7 +711,7 @@ func (s *Shell) GetAndDecrypt(hash string, password string) ([]byte, error) {
 		return nil, errors.New("get data error")
 	}
 
-	extData := encData[len(encData) - 32:]
+	extData := encData[len(encData)-32:]
 	salt := extData[:16]
 	dKey, err := kdf([]byte(password), salt)
 	if err != nil {
@@ -720,8 +723,8 @@ func (s *Shell) GetAndDecrypt(hash string, password string) ([]byte, error) {
 
 	encAlg := extData[31]
 	if encAlg == byte(AES) {
-		decData, err := aes.AesDecrypt(encData[:len(encData) - 32], eKey, nonce)
-		if err != nil || 0 == len(decData){
+		decData, err := aes.AesDecrypt(encData[:len(encData)-32], eKey, nonce)
+		if err != nil || 0 == len(decData) {
 			return nil, err
 		} else {
 			return decData, err
@@ -730,11 +733,11 @@ func (s *Shell) GetAndDecrypt(hash string, password string) ([]byte, error) {
 	return nil, errors.New("unsupport encrypt alg")
 }
 
-
 // Add data to ipfs, returns the hash of the added data
 func (s *Shell) AddData(data []byte) (string, error) {
 	r := bytes.NewReader(data)
-	return s.AddWithOpts(r, true, false, 0,nil)
+	hash, _, err := s.AddWithOpts(r, true, false, 0, nil)
+	return hash, err
 }
 
 func (s *Shell) GetData(hash string) ([]byte, error) {
@@ -758,4 +761,3 @@ func (s *Shell) GetData(hash string) ([]byte, error) {
 	data := buffer.Bytes()
 	return data, nil
 }
-
